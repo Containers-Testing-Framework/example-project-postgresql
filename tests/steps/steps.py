@@ -2,14 +2,7 @@
 from behave import step, when, then, given
 import subprocess
 from time import sleep
-
-
-@step(u'Docker container is started with params "{params}"')
-def container_started(context, params=''):
-    # TODO: allow tables here
-    # A nice candidate for common steps
-    context.job = context.run('docker run -d --cidfile %s %s %s' % (context.cid_file, params, context.image))
-    context.cid = open(context.cid_file).read().strip()
+from common_steps import common_docker_steps, common_connection_steps
 
 
 @when(u'postgresql container is started')
@@ -59,23 +52,3 @@ def postgresql_connect(context, action=False):
             sleep(5)
 
     raise Exception("Failed to connect to postgresql")
-
-
-@step(u'port {port:d} is open')
-@step(u'port {port:d} is {negative} open')
-def port_open(context, port, negative=False):
-    # Get container IP
-    context.ip = context.run("docker inspect --format='{{.NetworkSettings.IPAddress}}' %s" % context.cid).strip()
-
-    for attempts in xrange(0, 5):
-        try:
-            print(context.run('nc -w5 %s %s < /dev/null' % (context.ip, port)))
-            return
-        except subprocess.CalledProcessError:
-            # If  negative part was set, then we expect a bad code
-            # This enables steps like "can not be established"
-            if negative:
-                return
-            sleep(5)
-
-    raise Exception("Failed to connect to port %s" % port)
