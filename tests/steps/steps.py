@@ -44,6 +44,8 @@ def postgresql_connect(context, action=False):
     # Get container IP
     context.ip = context.run("docker inspect --format='{{.NetworkSettings.IPAddress}}' %s" % context.cid).strip()
 
+    context.execute_steps(u'* port 5432 is open')
+
     for attempts in xrange(0, 5):
         try:
             context.run('docker run --rm -e PGPASSWORD="%s" %s psql postgresql://%s@%s:5432/%s <<< "SELECT 1;"' % (
@@ -57,3 +59,23 @@ def postgresql_connect(context, action=False):
             sleep(5)
 
     raise Exception("Failed to connect to postgresql")
+
+
+@step(u'port {port:d} is open')
+@step(u'port {port:d} is {negative} open')
+def port_open(context, port, negative=False):
+    # Get container IP
+    context.ip = context.run("docker inspect --format='{{.NetworkSettings.IPAddress}}' %s" % context.cid).strip()
+
+    for attempts in xrange(0, 5):
+        try:
+            print(context.run('nc -w5 %s %s < /dev/null' % (context.ip, port)))
+            return
+        except subprocess.CalledProcessError:
+            # If  negative part was set, then we expect a bad code
+            # This enables steps like "can not be established"
+            if negative:
+                return
+            sleep(5)
+
+    raise Exception("Failed to connect to port %s" % port)
