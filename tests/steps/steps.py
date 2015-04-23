@@ -2,7 +2,7 @@
 from behave import step, when, then, given
 import subprocess
 from time import sleep
-from common_steps import common_docker_steps, common_connection_steps
+#from common_steps import common_docker_steps, common_connection_steps
 
 
 @when(u'postgresql container is started')
