@@ -34,9 +34,6 @@ def postgresql_connect(context, action=False):
     password = context.postgresql['POSTGRESQL_PASSWORD']
     db = context.postgresql['POSTGRESQL_DATABASE']
 
-    # Get container IP
-    context.ip = context.run("docker inspect --format='{{.NetworkSettings.IPAddress}}' %s" % context.cid).strip()
-
     context.execute_steps(u'* port 5432 is open')
 
     for attempts in xrange(0, 5):
@@ -44,7 +41,7 @@ def postgresql_connect(context, action=False):
             context.run('docker run --rm -e PGPASSWORD="%s" %s psql postgresql://%s@%s:5432/%s <<< "SELECT 1;"' % (
                 password, context.image, user, context.ip, db))
             return
-        except subprocess.CalledProcessError:
+        except AssertionError:
             # If  negative part was set, then we expect a bad code
             # This enables steps like "can not be established"
             if action != 'can':
