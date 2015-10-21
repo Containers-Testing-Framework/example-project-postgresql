@@ -1,0 +1,6 @@
+[submodule "tests/features/common_features"]
+	path = tests/features/common_features
+	url = https://github.com/Containers-Testing-Framework/common-features.git
+[submodule "tests/steps/common_steps"]
+	path = tests/steps/common_steps
+	url = https://github.com/Containers-Testing-Framework/common-steps.git
