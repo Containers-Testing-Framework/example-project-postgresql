@@ -1,2 +1,10 @@
-# -*- coding: UTF-8 -*-
-from steps.common_tests_steps.common_environment import before_all, before_scenario, after_all
+from steps.common_steps.common_environment import docker_setup
+
+
+def before_all(context):
+    docker_setup(context)
+    context.build_or_pull_image(skip_pull=True, skip_build=True)
+
+
+def after_scenario(context, scenario):
+    context.remove_container()
