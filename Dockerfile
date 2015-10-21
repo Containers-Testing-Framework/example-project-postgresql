@@ -1,5 +1,4 @@
 FROM centos:centos7
-MAINTAINER  Martin Nagy <mnagy@redhat.com>
 
 # PostgreSQL image for OpenShift.
 # Volumes:
@@ -11,11 +10,16 @@ MAINTAINER  Martin Nagy <mnagy@redhat.com>
 #  * $POSTGRESQL_ADMIN_PASSWORD (Optional) - Password for the 'postgres'
 #                           PostgreSQL administrative account
 
-# Image metadata
-ENV POSTGRESQL_VERSION      9.2
-ENV IMAGE_DESCRIPTION       PostgreSQL 9.2
-ENV IMAGE_TAGS              postgresql,postgresql92
-ENV IMAGE_EXPOSE_SERVICES   5432:postgresql
+MAINTAINER SoftwareCollections.org <sclorg@redhat.com>
+
+ENV POSTGRESQL_VERSION=9.2 \
+    HOME=/var/lib/pgsql \
+    PGUSER=postgres
+
+LABEL io.k8s.description="PostgreSQL is an advanced Object-Relational database management system" \
+      io.k8s.display-name="PostgreSQL 9.2" \
+      io.openshift.expose-services="5432:postgresql" \
+      io.openshift.tags="database,postgresql,postgresql92"
 
 EXPOSE 5432
 
@@ -24,17 +28,31 @@ EXPOSE 5432
 # to make sure of that.
 RUN rpmkeys --import file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7 && \
     yum -y --setopt=tsflags=nodocs install https://www.softwarecollections.org/en/scls/rhscl/postgresql92/epel-7-x86_64/download/rhscl-postgresql92-epel-7-x86_64.noarch.rpm && \
-    yum -y --setopt=tsflags=nodocs install gettext postgresql92 && \
+    yum -y --setopt=tsflags=nodocs --enablerepo=centosplus install gettext bind-utils postgresql92 epel-release && \
+    yum -y --setopt=tsflags=nodocs install nss_wrapper && \
     yum clean all && \
+    localedef -f UTF-8 -i en_US en_US.UTF-8 && \
     mkdir -p /var/lib/pgsql/data && chown postgres.postgres /var/lib/pgsql/data && \
-    test "$(id postgres)" = "uid=26(postgres) gid=26(postgres) groups=26(postgres)"
+    test "$(id postgres)" = "uid=26(postgres) gid=26(postgres) groups=26(postgres)" && \
+    # Loosen permission bits to avoid problems running container with arbitrary UID
+    chmod -R a+rwx /var/run/postgresql
 
-COPY run-postgresql.sh /usr/local/bin/
+COPY run-*.sh /usr/local/bin/
 COPY contrib /var/lib/pgsql/
+
+# Loosen permission bits to avoid problems running container with arbitrary UID
+RUN chmod -R a+rwx /var/lib/pgsql
+
+# When bash is started non-interactively, to run a shell script, for example it
+# looks for this variable and source the content of this file. This will enable
+# the SCL for all scripts without need to do 'scl enable'.
+ENV BASH_ENV=/var/lib/pgsql/scl_enable \
+    ENV=/var/lib/pgsql/scl_enable \
+    PROMPT_COMMAND=". /var/lib/pgsql/scl_enable"
 
 VOLUME ["/var/lib/pgsql/data"]
 
-USER postgres
+USER 26
 
 ENTRYPOINT ["run-postgresql.sh"]
 CMD ["postgres"]
